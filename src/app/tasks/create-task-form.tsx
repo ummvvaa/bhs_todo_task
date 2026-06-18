@@ -3,21 +3,40 @@
 import { useActionState, useEffect, useState } from 'react'
 import { createTask } from './actions'
 
+type Peer = {
+  id: string
+  full_name: string | null
+  email: string
+}
+
 type FormState = { error?: string; success?: boolean } | null
 
-export default function CreateTaskForm() {
+export default function CreateTaskForm({ peers = [] }: { peers?: Peer[] }) {
   const [state, action, isPending] = useActionState<FormState, FormData>(createTask, null)
   const [open, setOpen] = useState(false)
   const [isRecurring, setIsRecurring] = useState(false)
   const [formKey, setFormKey] = useState(0)
+  const [membersOpen, setMembersOpen] = useState(false)
+  const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (state?.success) {
       setOpen(false)
       setIsRecurring(false)
+      setMembersOpen(false)
+      setSelectedMembers(new Set())
       setFormKey((k) => k + 1)
     }
   }, [state])
+
+  function toggleMember(id: string) {
+    setSelectedMembers((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   if (!open) {
     return (
@@ -42,6 +61,8 @@ export default function CreateTaskForm() {
           onClick={() => {
             setOpen(false)
             setIsRecurring(false)
+            setMembersOpen(false)
+            setSelectedMembers(new Set())
           }}
           className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xl leading-none"
         >
@@ -59,8 +80,7 @@ export default function CreateTaskForm() {
             name="title"
             required
             autoFocus
-            placeholder="Что нужно сделать?"
-            className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+            className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
           />
         </div>
 
@@ -71,8 +91,7 @@ export default function CreateTaskForm() {
           <textarea
             name="description"
             rows={3}
-            placeholder="Дополнительные детали..."
-            className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-shadow"
+            className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-shadow"
           />
         </div>
 
@@ -113,6 +132,69 @@ export default function CreateTaskForm() {
               <option value="daily">Каждый день</option>
               <option value="weekly">Каждую неделю</option>
             </select>
+          </div>
+        )}
+
+        {/* Team invitation — collapsible */}
+        {peers.length > 0 && (
+          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMembersOpen((o) => !o)}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                Пригласить в команду
+                {selectedMembers.size > 0 && (
+                  <span className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs font-semibold px-1.5 py-0.5 rounded-full">
+                    {selectedMembers.size}
+                  </span>
+                )}
+              </span>
+              <svg
+                className={`w-4 h-4 text-slate-400 transition-transform ${membersOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {membersOpen && (
+              <div className="border-t border-slate-200 dark:border-slate-700 max-h-48 overflow-y-auto">
+                {peers.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 border-b border-slate-100 dark:border-slate-800 last:border-0 transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      name="member"
+                      value={p.id}
+                      checked={selectedMembers.has(p.id)}
+                      onChange={() => toggleMember(p.id)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-slate-900 dark:text-white truncate">
+                      {p.full_name ?? p.email}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

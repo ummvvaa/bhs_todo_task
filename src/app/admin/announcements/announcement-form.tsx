@@ -62,14 +62,14 @@ export default function AnnouncementForm({ staff }: { staff: StaffOption[] }) {
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
           Название <span className="text-red-500">*</span>
         </label>
-        <input type="text" name="title" required placeholder="Например: педсовет" className={inputClass} />
+        <input type="text" name="title" required className={inputClass} />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
           Описание
         </label>
-        <textarea name="description" rows={2} placeholder="Дополнительные детали..." className={`${inputClass} resize-none`} />
+        <textarea name="description" rows={2} className={`${inputClass} resize-none`} />
       </div>
 
       <div>

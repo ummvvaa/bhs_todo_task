@@ -59,6 +59,18 @@ export async function sendTelegram(
 }
 
 /**
+ * Отправляет сообщение с inline-кнопками (обёртка над sendMessage с reply_markup).
+ * Best-effort: при ошибке возвращает false и не бросает.
+ */
+export async function sendTelegramButtons(
+  chatId: string,
+  text: string,
+  buttons: InlineKeyboard,
+): Promise<boolean> {
+  return sendTelegram(chatId, text, buttons)
+}
+
+/**
  * Подтверждает нажатие inline-кнопки (убирает «часики» у пользователя).
  * Telegram требует ответить на callback_query, иначе кнопка «висит».
  */
@@ -66,6 +78,26 @@ export async function answerCallbackQuery(callbackQueryId: string, text?: string
   return callTelegram('answerCallbackQuery', {
     callback_query_id: callbackQueryId,
     ...(text ? { text } : {}),
+  })
+}
+
+/** Короткий псевдоним answerCallbackQuery (по терминологии командной фичи). */
+export const answerCallback = answerCallbackQuery
+
+/**
+ * Меняет текст ранее отправленного сообщения. Reply_markup не передаётся,
+ * поэтому inline-кнопки у сообщения убираются (нельзя ответить повторно).
+ */
+export async function editMessageText(
+  chatId: string,
+  messageId: number,
+  text: string,
+): Promise<boolean> {
+  return callTelegram('editMessageText', {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    disable_web_page_preview: true,
   })
 }
 

@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {
   sendTelegram,
   answerCallbackQuery,
+  answerCallback,
+  editMessageText,
   removeInlineKeyboard,
 } from '@/lib/telegram'
 import { LlmError } from '@/lib/llm'
@@ -32,6 +34,7 @@ type TelegramUpdate = {
   callback_query?: {
     id: string
     data?: string
+    from?: { id?: number }
     message?: { chat?: { id?: number }; message_id?: number }
   }
 }
@@ -83,6 +86,14 @@ async function handleCallback(
   const chatId = cq.message?.chat?.id
   const messageId = cq.message?.message_id
   const data = cq.data ?? ''
+
+  // Командная фича (Этап 19): ответ на приглашение в команду по задаче.
+  // Формат: team_accept:<uuid> | team_decline:<uuid> (uuid = task_members.id)
+  const teamMatch = data.match(/^team_(accept|decline):([0-9a-f-]{36})$/i)
+  if (teamMatch) {
+    await handleTeamResponse(admin, cq, teamMatch[1].toLowerCase() as 'accept' | 'decline', teamMatch[2])
+    return
+  }
 
   // Формат: checkin:<uuid>:done | checkin:<uuid>:not_done
   const m = data.match(/^checkin:([0-9a-f-]{36}):(done|not_done)$/i)
@@ -145,6 +156,88 @@ async function handleCallback(
 
   await answerCallbackQuery(cq.id)
   await sendTelegram(chatIdStr, firstQuestion)
+}
+
+// ─── callback_query: приглашение в команду по задаче (Этап 19) ───────────────
+
+async function handleTeamResponse(
+  admin: SupabaseClient,
+  cq: NonNullable<TelegramUpdate['callback_query']>,
+  action: 'accept' | 'decline',
+  memberRowId: string,
+) {
+  const chatId = cq.message?.chat?.id
+  const messageId = cq.message?.message_id
+  const fromId = cq.from?.id
+
+  const { data: row } = await admin
+    .from('task_members')
+    .select('id, status, task_id, profile_id, invited_by')
+    .eq('id', memberRowId)
+    .maybeSingle()
+
+  if (!row) {
+    await answerCallback(cq.id, 'Приглашение не найдено.')
+    return
+  }
+
+  // Безопасность: нажать кнопку может только сам приглашённый участник.
+  const { data: member } = await admin
+    .from('profiles')
+    .select('full_name, telegram_chat_id')
+    .eq('id', row.profile_id)
+    .maybeSingle()
+
+  if (!member || String(fromId) !== member.telegram_chat_id) {
+    await answerCallback(cq.id, 'Это приглашение не для вас.')
+    return
+  }
+
+  // Повторное нажатие — ответ уже зафиксирован, ничего не меняем.
+  if (row.status !== 'pending') {
+    await answerCallback(cq.id, 'Вы уже ответили на это приглашение.')
+    return
+  }
+
+  const newStatus = action === 'accept' ? 'accepted' : 'declined'
+  await admin
+    .from('task_members')
+    .update({ status: newStatus, responded_at: new Date().toISOString() })
+    .eq('id', row.id)
+
+  await answerCallback(cq.id, action === 'accept' ? 'Принято!' : 'Отклонено')
+  if (chatId && messageId) {
+    await editMessageText(
+      String(chatId),
+      messageId,
+      action === 'accept' ? 'Вы приняли приглашение ✅' : 'Вы отклонили ❌',
+    )
+  }
+
+  // Уведомляем владельца задачи (того, кто пригласил).
+  const { data: task } = await admin
+    .from('tasks')
+    .select('title')
+    .eq('id', row.task_id)
+    .maybeSingle()
+  const title = task?.title ?? 'задача'
+
+  if (row.invited_by) {
+    const { data: owner } = await admin
+      .from('profiles')
+      .select('telegram_chat_id')
+      .eq('id', row.invited_by)
+      .maybeSingle()
+    if (owner?.telegram_chat_id) {
+      const memberName = member.full_name?.trim() || 'Участник'
+      await sendTelegram(
+        owner.telegram_chat_id,
+        action === 'accept'
+          ? `✅ ${memberName} принял приглашение в задаче «${title}»`
+          : `❌ ${memberName} отклонил приглашение в задаче «${title}»`,
+      )
+    }
+  }
 }
 
 // ─── message: /start (привязка) или свободный текст (диалог) ─────────────────

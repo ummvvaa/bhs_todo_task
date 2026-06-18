@@ -74,7 +74,6 @@ export default function ChangePasswordForm({ email }: { email: string }) {
           <input
             className={inputCls}
             type="password"
-            placeholder="Введите текущий пароль"
             value={current}
             onChange={(e) => { setCurrent(e.target.value); setError(null); setSuccess(false) }}
             required
@@ -86,7 +85,6 @@ export default function ChangePasswordForm({ email }: { email: string }) {
           <input
             className={inputCls}
             type="password"
-            placeholder="Минимум 6 символов"
             value={next}
             onChange={(e) => { setNext(e.target.value); setError(null); setSuccess(false) }}
             required
@@ -99,7 +97,6 @@ export default function ChangePasswordForm({ email }: { email: string }) {
           <input
             className={inputCls}
             type="password"
-            placeholder="Повторите новый пароль"
             value={confirm}
             onChange={(e) => { setConfirm(e.target.value); setError(null); setSuccess(false) }}
             required

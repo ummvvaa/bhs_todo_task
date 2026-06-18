@@ -71,7 +71,6 @@ function AddEmployeeForm({ onCreated }: { onCreated: (email: string) => void }) 
           <label className={labelCls}>Имя и фамилия *</label>
           <input
             className={inputCls}
-            placeholder="Иванов Иван"
             value={form.full_name}
             onChange={(e) => set('full_name', e.target.value)}
             required
@@ -82,7 +81,6 @@ function AddEmployeeForm({ onCreated }: { onCreated: (email: string) => void }) 
           <input
             className={inputCls}
             type="email"
-            placeholder="ivan@betahighschool.kz"
             value={form.email}
             onChange={(e) => set('email', e.target.value)}
             required
@@ -93,7 +91,6 @@ function AddEmployeeForm({ onCreated }: { onCreated: (email: string) => void }) 
           <input
             className={inputCls}
             type="password"
-            placeholder="Минимум 6 символов"
             value={form.password}
             onChange={(e) => set('password', e.target.value)}
             required
@@ -121,7 +118,6 @@ function AddEmployeeForm({ onCreated }: { onCreated: (email: string) => void }) 
         <textarea
           className={inputCls + ' resize-none'}
           rows={2}
-          placeholder="Краткое описание задач и навыков сотрудника"
           value={form.responsibilities}
           onChange={(e) => set('responsibilities', e.target.value)}
         />
@@ -302,7 +298,6 @@ function ResetPasswordForm({ userId, onClose }: { userId: string; onClose: () =>
         <input
           className={inputCls + ' flex-1 min-w-[180px]'}
           type="password"
-          placeholder="Новый пароль (мин. 6 символов)"
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           required

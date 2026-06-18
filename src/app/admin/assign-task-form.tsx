@@ -149,7 +149,6 @@ export default function AssignTaskForm({ profiles }: { profiles: Profile[] }) {
             name="title"
             required
             autoFocus
-            placeholder="Что нужно сделать?"
             className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
           />
         </div>
@@ -161,7 +160,6 @@ export default function AssignTaskForm({ profiles }: { profiles: Profile[] }) {
           <textarea
             name="description"
             rows={2}
-            placeholder="Дополнительные детали..."
             className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-shadow"
           />
         </div>

@@ -77,7 +77,6 @@ export default function AssistantChat() {
             }
           }}
           rows={2}
-          placeholder="Спросите о задачах и сотрудниках обычными словами…"
           className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />
         <div className="flex items-center justify-between gap-3">

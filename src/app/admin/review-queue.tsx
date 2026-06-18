@@ -206,7 +206,6 @@ export default function ReviewQueue({
                     <textarea
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      placeholder="Причина возврата (обязательно)..."
                       rows={3}
                       className="w-full text-sm border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow"
                     />

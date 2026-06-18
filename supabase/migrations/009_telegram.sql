@@ -34,25 +34,25 @@ COMMENT ON COLUMN profiles.telegram_link_code IS
 --   * секрета CRON_SECRET (тот же, что в .env.local приложения).
 --
 -- НАСТРОИТЬ ПОСЛЕ ДЕПЛОЯ: подставьте свой домен и CRON_SECRET, затем выполните.
---
--- create extension if not exists pg_net;
---
--- select cron.unschedule('telegram-deadline-reminders')
--- where exists (select 1 from cron.job where jobname = 'telegram-deadline-reminders');
---
--- select cron.schedule(
---   'telegram-deadline-reminders',
---   '0 22 * * *',                              -- 22:00 UTC = 03:00 Asia/Almaty (как nightly-task-maintenance)
---   $$
---     select net.http_post(
---       url     := 'https://ВАШ-ДОМЕН.vercel.app/api/cron/telegram-reminders',
---       headers := jsonb_build_object(
---         'Content-Type', 'application/json',
---         'Authorization', 'Bearer ВАШ_CRON_SECRET'
---       ),
---       body    := '{}'::jsonb
---     );
---   $$
--- );
---
--- Проверка: select * from cron.job where jobname = 'telegram-deadline-reminders';
+
+ create extension if not exists pg_net;
+
+ select cron.unschedule('telegram-deadline-reminders')
+ where exists (select 1 from cron.job where jobname = 'telegram-deadline-reminders');
+
+ select cron.schedule(
+   'telegram-deadline-reminders',
+   '0 22 * * *',                              -- 22:00 UTC = 03:00 Asia/Almaty (как nightly-task-maintenance)
+   $$
+     select net.http_post(
+       url     := 'https://ВАШ-ДОМЕН.vercel.app/api/cron/telegram-reminders',
+       headers := jsonb_build_object(
+         'Content-Type', 'application/json',
+         'Authorization', 'Bearer ВАШ_CRON_SECRET'
+       ),
+       body    := '{}'::jsonb
+     );
+   $$
+ );
+
+ Проверка: select * from cron.job where jobname = 'telegram-deadline-reminders';

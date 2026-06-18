@@ -29,6 +29,11 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Публичные серверные эндпоинты — секрет проверяют сами, редирект не нужен.
+  if (pathname.startsWith('/api/telegram/webhook') || pathname.startsWith('/api/cron/')) {
+    return NextResponse.next()
+  }
+
   if (!user && pathname !== '/login') {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
@@ -60,6 +65,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/telegram/webhook|api/cron/).*)',
   ],
 }

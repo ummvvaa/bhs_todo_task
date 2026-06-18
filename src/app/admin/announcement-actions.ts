@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendTelegram } from '@/lib/telegram'
+import { formatDateTime } from '@/lib/datetime'
 
 type ActionResult = { error?: string; success?: boolean } | null
 
@@ -85,6 +87,40 @@ export async function createAnnouncement(
       await admin.from('announcements').delete().eq('id', created.id)
       return { error: recErr.message }
     }
+  }
+
+  // Telegram-уведомления — best-effort, ошибки не ломают action.
+  try {
+    let chatIds: string[] = []
+
+    if (audience === 'all') {
+      const { data: profiles } = await admin
+        .from('profiles')
+        .select('telegram_chat_id')
+        .eq('is_active', true)
+        .not('telegram_chat_id', 'is', null)
+      chatIds = (profiles ?? [])
+        .map((p) => p.telegram_chat_id as string)
+        .filter(Boolean)
+    } else {
+      const { data: profiles } = await admin
+        .from('profiles')
+        .select('telegram_chat_id')
+        .in('id', recipientIds)
+        .not('telegram_chat_id', 'is', null)
+      chatIds = (profiles ?? [])
+        .map((p) => p.telegram_chat_id as string)
+        .filter(Boolean)
+    }
+
+    if (chatIds.length > 0) {
+      const lines = [`📢 Новое объявление: ${title}`, `🕐 ${formatDateTime(eventAt)}`]
+      if (description) lines.push(description)
+      const text = lines.join('\n')
+      await Promise.allSettled(chatIds.map((id) => sendTelegram(id, text)))
+    }
+  } catch {
+    // best-effort: не прерываем action
   }
 
   revalidatePath('/admin/announcements')

@@ -326,7 +326,7 @@ export default function TaskList({
   const pillRow = 'flex gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl overflow-x-auto no-scrollbar'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Фильтр по дате */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-3 space-y-2">
         <p className="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">
@@ -391,7 +391,7 @@ export default function TaskList({
           </p>
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {filtered.map((task) => {
             const overdue = isOverdue(task, now)
             const isReviewing = reviewingId === task.id
@@ -409,10 +409,10 @@ export default function TaskList({
                     : 'border-slate-100 dark:border-slate-800'
                 }`}
               >
-                <div className="p-4 space-y-2.5">
-                  {/* Заголовок + бейдж (+ чекбокс для задач админа) */}
+                <div className="p-3 space-y-2">
+                  {/* Заголовок + бейдж (+ чекбокс только для задач admin'а, где он исполнитель) */}
                   <div className="flex items-start gap-3">
-                    {isAdminOwnTask && (task.status === 'open' || task.status === 'done') && (
+                    {isAdmin && task.assigned_to === userId && (task.status === 'open' || task.status === 'done') && (
                       <button
                         onClick={() => handleToggleDone(task)}
                         disabled={checkLoading}
@@ -457,24 +457,24 @@ export default function TaskList({
 
                   {/* Описание */}
                   {task.description && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">
                       {task.description}
                     </p>
                   )}
 
                   {/* Комментарий начальника */}
                   {task.task_comments && task.task_comments.length > 0 && (
-                    <div className="bg-orange-50 dark:bg-orange-950/50 border border-orange-100 dark:border-orange-900 rounded-xl px-3.5 py-2.5 space-y-1.5">
+                    <div className="bg-orange-50 dark:bg-orange-950/50 border border-orange-100 dark:border-orange-900 rounded-xl px-3 py-2 space-y-1">
                       <p className="text-xs font-semibold text-orange-700 dark:text-orange-300 uppercase tracking-wide">
                         Комментарий начальника
                       </p>
                       {task.task_comments.map((c) => (
                         <p
                           key={c.id}
-                          className="text-sm text-orange-800 dark:text-orange-200 leading-snug"
+                          className="text-xs text-orange-800 dark:text-orange-200 leading-snug"
                         >
                           &ldquo;{c.body}&rdquo;
-                          <span className="ml-1.5 text-xs text-orange-400 dark:text-orange-500">
+                          <span className="ml-1.5 text-orange-400 dark:text-orange-500">
                             {formatDateTime(c.created_at)}
                           </span>
                         </p>
@@ -484,20 +484,20 @@ export default function TaskList({
 
                   {/* Прикреплённые файлы (уже загруженные) */}
                   {task.task_files && task.task_files.length > 0 && (
-                    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl px-3.5 py-2.5 space-y-1.5">
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2 space-y-1">
                       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Прикреплённые файлы
                       </p>
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         {task.task_files.map((f) => (
                           <div
                             key={f.id}
-                            className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400"
+                            className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400"
                           >
                             <span className="shrink-0">📎</span>
                             <span className="truncate">{f.file_name}</span>
                             {f.size != null && (
-                              <span className="text-xs text-slate-400 shrink-0">
+                              <span className="text-slate-400 shrink-0">
                                 {formatBytes(f.size)}
                               </span>
                             )}
@@ -509,7 +509,7 @@ export default function TaskList({
 
                   {/* Участники команды (только у владельца) */}
                   {task.task_members && task.task_members.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                    <div className="flex flex-wrap gap-1">
                       {task.task_members.map((m) => {
                         const name = m.full_name ?? 'Участник'
                         const badge =
@@ -540,7 +540,7 @@ export default function TaskList({
                   )}
 
                   {/* Нижняя строка: дедлайн + кнопка «Готово» */}
-                  <div className="flex items-center justify-between flex-wrap gap-2 pt-0.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       {task.due_date && (
                         <span

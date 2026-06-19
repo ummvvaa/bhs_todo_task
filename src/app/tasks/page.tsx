@@ -14,22 +14,28 @@ export default async function TasksPage() {
 
   const admin = createAdminClient()
 
-  // Parallel data loads
-  const [
-    { data: tasks },
-    { data: profile },
-    { data: allProfiles },
-    { data: memberRows },
-  ] = await Promise.all([
-    supabase
-      .from('tasks')
-      .select(
-        'id, title, description, assigned_to, due_date, status, is_recurring, recurrence, created_at, completed_at, task_comments(id, body, created_at), task_files(id, file_name, size, created_at), task_members(profile_id, status)',
-      )
-      .or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`)
-      .order('created_at', { ascending: false }),
+  // Fetch profile first — role determines task query filter
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, role')
+    .eq('id', user.id)
+    .single()
 
-    supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
+  const isAdmin = profile?.role === 'admin'
+
+  // For admin: only tasks assigned to them (delegated tasks shown on dashboard/review queue).
+  // For staff: tasks assigned to or created by them.
+  const tasksQuery = supabase
+    .from('tasks')
+    .select(
+      'id, title, description, assigned_to, due_date, status, is_recurring, recurrence, created_at, completed_at, task_comments(id, body, created_at), task_files(id, file_name, size, created_at), task_members(profile_id, status)',
+    )
+    .order('created_at', { ascending: false })
+
+  const [{ data: tasks }, { data: allProfiles }, { data: memberRows }] = await Promise.all([
+    isAdmin
+      ? tasksQuery.eq('assigned_to', user.id)
+      : tasksQuery.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`),
 
     // All profiles (for name lookup and CreateTaskForm peers)
     admin
@@ -144,7 +150,7 @@ export default async function TasksPage() {
 
       {/* Own task list */}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <TaskList tasks={all as any} isAdmin={profile?.role === 'admin'} userId={user.id} />
+      <TaskList tasks={all as any} isAdmin={isAdmin} userId={user.id} />
 
       {/* Team tasks — read-only section */}
       {teamTasks.length > 0 && (

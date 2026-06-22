@@ -33,6 +33,17 @@ export default async function AdminPage() {
         </p>
       </div>
 
+      {/* Assign task */}
+      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-1">
+          Назначить задачу
+        </h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Создать задачу одному или сразу нескольким сотрудникам — для каждого создаётся отдельная задача.
+        </p>
+        <AssignTaskForm profiles={staffProfiles} />
+      </section>
+
       {/* Employees management */}
       <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5">
         <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-1">
@@ -46,17 +57,6 @@ export default async function AdminPage() {
           profiles={(allProfiles ?? []) as EmployeeProfile[]}
           currentUserId={user!.id}
         />
-      </section>
-
-      {/* Assign task */}
-      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-1">
-          Назначить задачу
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Создать задачу одному или сразу нескольким сотрудникам — для каждого создаётся отдельная задача.
-        </p>
-        <AssignTaskForm profiles={staffProfiles} />
       </section>
 
     </div>

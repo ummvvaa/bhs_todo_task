@@ -362,11 +362,11 @@ function EmployeeRow({
           : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 opacity-70'
       }`}
     >
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-3">
+      {/* Header row: на мобильном — колонкой (имя/email сверху, кнопки ниже), на ≥sm — в строку */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium text-slate-900 dark:text-white text-sm truncate">
+            <span className="font-medium text-slate-900 dark:text-white text-sm break-words">
               {profile.full_name ?? '—'}
             </span>
             <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${roleBadge}`}>
@@ -383,7 +383,7 @@ function EmployeeRow({
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{profile.email}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 break-words">{profile.email}</p>
           {profile.responsibilities && !editing && (
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 line-clamp-2">
               {profile.responsibilities}
@@ -391,8 +391,8 @@ function EmployeeRow({
           )}
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Action buttons: на мобильном переносятся на свою строку под именем, не сжимают имя */}
+        <div className="flex flex-wrap items-center gap-1 sm:flex-shrink-0">
           {!editing && !resettingPassword && (
             <>
               <button

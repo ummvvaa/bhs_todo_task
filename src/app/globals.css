@@ -1,28 +1,26 @@
 @import "tailwindcss";
 
+/*
+ * Приложение ВСЕГДА светлое — даже если на устройстве включена тёмная тема.
+ * Переопределяем dark-вариант Tailwind на класс `.dark` (который мы нигде не вешаем),
+ * поэтому все существующие `dark:`-утилиты никогда не применяются (по умолчанию они
+ * срабатывали бы по @media prefers-color-scheme: dark).
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 :root {
+  color-scheme: light;
   --background: #f8fafc;
   --foreground: #0f172a;
   --sidebar-bg: #0f172a;
   --sidebar-border: #1e293b;
   --card-bg: #ffffff;
   --card-border: #e2e8f0;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --foreground: #f1f5f9;
-    --sidebar-bg: #020617;
-    --sidebar-border: #1e293b;
-    --card-bg: #1e293b;
-    --card-border: #334155;
-  }
 }
 
 body {

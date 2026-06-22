@@ -10,6 +10,7 @@ type Task = {
   assigned_to: string | null
   completed_at: string | null
 }
+type Member = { task_id: string; profile_id: string }
 
 const STATUS_LABEL: Record<string, string> = {
   open: 'Открыта',
@@ -40,15 +41,24 @@ function pluralTasks(n: number): string {
 export default function TeamBoard({
   profiles,
   tasks,
+  members,
 }: {
   profiles: Profile[]
   tasks: Task[]
+  members: Member[]
 }) {
   const [expanded, setExpanded] = useState<string | null>(null)
 
   const cutoff = sevenDaysAgo()
 
-  // Done tasks in last 7 days per employee
+  // task_id → принятые участники команды (засчитываются наравне с владельцем).
+  const membersByTask: Record<string, string[]> = {}
+  for (const m of members) {
+    ;(membersByTask[m.task_id] ??= []).push(m.profile_id)
+  }
+
+  // Done tasks in last 7 days per employee — рейтинг по реально выполненным
+  // владельцем (assigned_to), участников сюда НЕ добавляем.
   const weekDone: Record<string, number> = {}
   for (const t of tasks) {
     if (
@@ -61,20 +71,24 @@ export default function TeamBoard({
     }
   }
 
-  // Active tasks (open + in_review) per employee
-  const activeCount: Record<string, number> = {}
+  // Tasks grouped by employee: свои (assigned_to) ∪ командные принятые.
+  // Каждая задача засчитывается сотруднику один раз (без дублей).
+  const byEmployee: Record<string, Task[]> = {}
   for (const t of tasks) {
-    if ((t.status === 'open' || t.status === 'in_review') && t.assigned_to) {
-      activeCount[t.assigned_to] = (activeCount[t.assigned_to] ?? 0) + 1
+    const responsible = new Set<string>()
+    if (t.assigned_to) responsible.add(t.assigned_to)
+    for (const pid of membersByTask[t.id] ?? []) responsible.add(pid)
+    for (const pid of responsible) {
+      ;(byEmployee[pid] ??= []).push(t)
     }
   }
 
-  // Tasks grouped by employee
-  const byEmployee: Record<string, Task[]> = {}
-  for (const t of tasks) {
-    if (t.assigned_to) {
-      ;(byEmployee[t.assigned_to] ??= []).push(t)
-    }
+  // Active tasks (open + in_review) per employee — из объединённого списка.
+  const activeCount: Record<string, number> = {}
+  for (const pid of Object.keys(byEmployee)) {
+    activeCount[pid] = byEmployee[pid].filter(
+      (t) => t.status === 'open' || t.status === 'in_review',
+    ).length
   }
 
   // Leaderboard: only employees with done tasks this week

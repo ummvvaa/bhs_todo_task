@@ -9,14 +9,17 @@ export const runtime = 'nodejs'
 // ИИ-ассистент начальника: вопрос обычными словами → компактный срез данных → LLM.
 // Срез намеренно ограничен незавершёнными задачами (open/in_review) и агрегатами,
 // чтобы контекст не разрастался при сотнях сотрудников и задач.
+// Командные задачи (task_members) учитываются для каждого принятого участника.
 
 type ProfileRow = { id: string; full_name: string | null }
 type TaskRow = {
+  id: string
   title: string | null
   assigned_to: string | null
   status: string
   due_date: string | null
 }
+type MemberRow = { task_id: string; profile_id: string }
 
 // Сколько незавершённых задач максимум перечислять построчно (счётчики — по всем).
 const MAX_TASKS_LISTED = 150
@@ -77,23 +80,33 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient()
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [{ data: profiles }, { data: openTasks }, { data: doneRows }] = await Promise.all([
+  const [
+    { data: profiles },
+    { data: openTasks },
+    { data: doneRows },
+    { data: members },
+  ] = await Promise.all([
     admin
       .from('profiles')
       .select('id, full_name')
       .eq('is_active', true)
       .order('full_name', { ascending: true }),
-    // только незавершённые задачи — счётчики open/in_review/overdue + сам список
+    // незавершённые задачи — счётчики open/in_review/overdue + список; id нужен для task_members
     admin
       .from('tasks')
-      .select('title, assigned_to, status, due_date')
+      .select('id, title, assigned_to, status, due_date')
       .in('status', ['open', 'in_review']),
-    // выполнено за последние 30 дней — только для счётчика «выполнено»
+    // выполнено за 30 дней — id нужен для task_members, assigned_to для владельца
     admin
       .from('tasks')
-      .select('assigned_to')
+      .select('id, assigned_to')
       .eq('status', 'done')
       .gte('completed_at', thirtyDaysAgo),
+    // принятые участники командных задач
+    admin
+      .from('task_members')
+      .select('task_id, profile_id')
+      .eq('status', 'accepted'),
   ])
 
   const employees = (profiles ?? []) as ProfileRow[]
@@ -106,6 +119,28 @@ export async function POST(request: NextRequest) {
 
   const nameById = new Map(employees.map((e) => [e.id, e.full_name ?? 'Без имени']))
   const now = new Date()
+
+  // task_id → Set<profile_id> принятых участников (все задачи, не только open)
+  const taskMembersMap = new Map<string, Set<string>>()
+  for (const m of (members ?? []) as MemberRow[]) {
+    let s = taskMembersMap.get(m.task_id)
+    if (!s) { s = new Set(); taskMembersMap.set(m.task_id, s) }
+    s.add(m.profile_id)
+  }
+
+  // Возвращает ответственных за задачу: владелец (assigned_to) + принятые участники.
+  // Отфильтровывает тех, кто не в списке активных сотрудников.
+  function responsibleIds(taskId: string, assignedTo: string | null): string[] {
+    const ids = new Set<string>()
+    if (assignedTo && nameById.has(assignedTo)) ids.add(assignedTo)
+    const mems = taskMembersMap.get(taskId)
+    if (mems) {
+      for (const pid of mems) {
+        if (nameById.has(pid)) ids.add(pid)
+      }
+    }
+    return Array.from(ids)
+  }
 
   type Counters = { open: number; in_review: number; overdue: number; done30: number }
   const stats = new Map<string, Counters>()
@@ -122,14 +157,18 @@ export async function POST(request: NextRequest) {
 
   const tasks = (openTasks ?? []) as TaskRow[]
   for (const t of tasks) {
-    if (!t.assigned_to || !stats.has(t.assigned_to)) continue
-    const s = ensure(t.assigned_to)
-    if (t.status === 'in_review') s.in_review++
-    else s.open++
-    if (t.due_date && new Date(t.due_date) < now) s.overdue++
+    const isOverdue = !!t.due_date && new Date(t.due_date) < now
+    for (const pid of responsibleIds(t.id, t.assigned_to)) {
+      const s = ensure(pid)
+      if (t.status === 'in_review') s.in_review++
+      else s.open++
+      if (isOverdue) s.overdue++
+    }
   }
-  for (const r of (doneRows ?? []) as { assigned_to: string | null }[]) {
-    if (r.assigned_to && stats.has(r.assigned_to)) ensure(r.assigned_to).done30++
+  for (const r of (doneRows ?? []) as { id: string; assigned_to: string | null }[]) {
+    for (const pid of responsibleIds(r.id, r.assigned_to)) {
+      ensure(pid).done30++
+    }
   }
 
   // --- Строки сотрудников (счётчики по всем активным) ---
@@ -148,11 +187,21 @@ export async function POST(request: NextRequest) {
     })
   const shown = sortedTasks.slice(0, MAX_TASKS_LISTED)
   const taskLines = shown.map((t) => {
-    const who = t.assigned_to ? nameById.get(t.assigned_to) ?? 'неизвестно' : 'не назначен'
+    const owner = t.assigned_to ? nameById.get(t.assigned_to) ?? 'неизвестно' : 'не назначен'
     const statusLabel = STATUS_LABEL[t.status] ?? t.status
     const deadline = t.due_date ? formatDateTime(t.due_date) : 'без дедлайна'
     const overdue = t.due_date && new Date(t.due_date) < now ? ' [ПРОСРОЧЕНО]' : ''
-    return `«${t.title ?? 'без названия'}» — исполнитель: ${who}, статус: ${statusLabel}, дедлайн: ${deadline}${overdue}`
+    const mems = taskMembersMap.get(t.id)
+    const memberNames = mems
+      ? Array.from(mems)
+          .filter((pid) => nameById.has(pid))
+          .map((pid) => nameById.get(pid)!)
+      : []
+    const teamTag =
+      memberNames.length > 0
+        ? ` [КОМАНДНАЯ, участники: ${memberNames.join(', ')}]`
+        : ''
+    return `«${t.title ?? 'без названия'}» — владелец: ${owner}, статус: ${statusLabel}, дедлайн: ${deadline}${overdue}${teamTag}`
   })
   const truncatedNote =
     sortedTasks.length > shown.length
@@ -167,6 +216,9 @@ export async function POST(request: NextRequest) {
     'Если данных для ответа недостаточно — честно скажи об этом. ' +
     'Где уместно, перечисляй сотрудников или задачи списком. ' +
     'Статусы: «открыта» и «на проверке» — незавершённые; «просрочено» — незавершённая задача с истёкшим дедлайном. ' +
+    'Задача с меткой [КОМАНДНАЯ] — командная: у неё есть владелец и принятые участники; ' +
+    'в счётчиках сотрудника она учитывается и для владельца, и для каждого участника. ' +
+    'При ответе на вопрос о задачах сотрудника учитывай оба случая: он может быть владельцем или участником командной задачи. ' +
     'Учитывай, что список задач может быть усечён, а счётчики по сотрудникам — полные.'
 
   const dataBlock =

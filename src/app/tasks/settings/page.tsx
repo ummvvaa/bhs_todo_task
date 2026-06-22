@@ -69,7 +69,7 @@ export default async function SettingsPage() {
           Уведомления в Telegram
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          Привяжите Telegram, чтобы получать уведомления о новых задачах и дедлайнах.
+          Привяжите Telegram, чтобы получать уведомления о новых задачах, объявлениях и приглашениях в команду.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default async function SettingsPage() {
             ✓ Telegram привязан
           </p>
           <p className="text-sm text-emerald-700/80 dark:text-emerald-300/80 mt-1">
-            Уведомления о назначенных задачах и напоминания о дедлайнах приходят в ваш чат с ботом.
+            Уведомления о новых задачах, объявлениях и приглашениях в команду приходят в ваш чат с ботом.
           </p>
         </div>
       ) : (

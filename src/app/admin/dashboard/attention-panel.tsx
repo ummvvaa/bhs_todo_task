@@ -47,7 +47,7 @@ export default function AttentionPanel({ signals }: { signals: AttentionSignals 
         )}
 
         {dueSoon.length > 0 && (
-          <SignalCard title="Дедлайн в ближайшие 24–48 ч">
+          <SignalCard title="Дедлайн в ближайшие 24 ч">
             <ul className="space-y-1.5">
               {dueSoon.map((d, i) => (
                 <li key={i} className="leading-snug">

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendTelegram } from '@/lib/telegram'
-import { formatDateTime } from '@/lib/datetime'
+import { formatDateTime, almatyLocalToUtcISO } from '@/lib/datetime'
 
 type ActionResult = { error?: string; success?: boolean } | null
 
@@ -25,19 +25,6 @@ async function requireAdmin() {
   return user
 }
 
-/**
- * datetime-local ("YYYY-MM-DDTHH:mm") трактуем во времени Алматы (UTC+5, без DST)
- * и переводим в UTC ISO для timestamptz. Возвращает null при некорректном вводе.
- */
-function almatyLocalToUtcIso(local: string): string | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local)
-  if (!m) return null
-  const [, y, mo, d, h, mi] = m
-  const iso = new Date(`${y}-${mo}-${d}T${h}:${mi}:00+05:00`)
-  if (Number.isNaN(iso.getTime())) return null
-  return iso.toISOString()
-}
-
 export async function createAnnouncement(
   _prevState: ActionResult,
   formData: FormData,
@@ -53,7 +40,7 @@ export async function createAnnouncement(
 
   if (!title) return { error: 'Название обязательно' }
 
-  const eventAt = almatyLocalToUtcIso(eventAtRaw)
+  const eventAt = almatyLocalToUtcISO(eventAtRaw)
   if (!eventAt) return { error: 'Укажите дату и время события' }
 
   if (audience === 'selected' && recipientIds.length === 0) {

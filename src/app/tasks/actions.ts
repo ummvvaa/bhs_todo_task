@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendTelegramButtons } from '@/lib/telegram'
+import { almatyLocalToUtcISO } from '@/lib/datetime'
 
 type ActionResult = { error?: string; success?: boolean } | null
 
@@ -77,6 +78,9 @@ export async function createTask(
 
   if (!title) return { error: 'Название обязательно' }
 
+  // datetime-local трактуем как время Алматы (UTC+5) при сохранении в timestamptz.
+  const dueDate = almatyLocalToUtcISO(dueDateStr)
+
   const { data: task, error } = await supabase
     .from('tasks')
     .insert({
@@ -84,7 +88,7 @@ export async function createTask(
       description,
       assigned_to: user.id,
       created_by: user.id,
-      due_date: dueDateStr || null,
+      due_date: dueDate,
       is_recurring: isRecurring,
       recurrence: isRecurring ? recurrence : null,
     })

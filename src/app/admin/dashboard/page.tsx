@@ -56,6 +56,7 @@ export default async function DashboardPage({
     { data: reviewTasks },
     { data: activeTasks },
     { data: attentionTasks },
+    { data: acceptedMembers },
   ] = await Promise.all([
     admin
       .from('profiles')
@@ -80,7 +81,18 @@ export default async function DashboardPage({
       .from('tasks')
       .select('title, status, due_date, assigned_to')
       .in('status', ['open', 'in_review']),
+    // Принятые участники команд — задача засчитывается и им (в per-employee счётчиках).
+    admin
+      .from('task_members')
+      .select('task_id, profile_id')
+      .eq('status', 'accepted'),
   ])
+
+  // task_id → список profile_id принятых участников команды.
+  const membersByTask: Record<string, string[]> = {}
+  for (const m of acceptedMembers ?? []) {
+    ;(membersByTask[m.task_id] ??= []).push(m.profile_id)
+  }
 
   const reviewTaskIds = reviewTasks?.map((t) => t.id) ?? []
   const filesByTask = await getTaskFilesWithUrls(reviewTaskIds)
@@ -92,19 +104,26 @@ export default async function DashboardPage({
 
   const now = new Date()
 
+  // Per-employee счётчики: задача засчитывается владельцу (assigned_to) И каждому
+  // принятому участнику команды. Командная задача → +1 каждому ответственному.
   const empStats: Record<string, EmpStats> = {}
   for (const t of tasks ?? []) {
-    if (!t.assigned_to) continue
-    const s = (empStats[t.assigned_to] ??= { open: 0, in_review: 0, done: 0, overdue: 0 })
-    if (t.status === 'done') s.done++
-    else if (t.status === 'in_review') s.in_review++
-    else s.open++
-    if (
+    const responsible = new Set<string>()
+    if (t.assigned_to) responsible.add(t.assigned_to)
+    for (const pid of membersByTask[t.id] ?? []) responsible.add(pid)
+    if (responsible.size === 0) continue
+
+    const isOverdue =
       (t.status === 'open' || t.status === 'in_review') &&
-      t.due_date &&
+      !!t.due_date &&
       new Date(t.due_date) < now
-    ) {
-      s.overdue++
+
+    for (const pid of responsible) {
+      const s = (empStats[pid] ??= { open: 0, in_review: 0, done: 0, overdue: 0 })
+      if (t.status === 'done') s.done++
+      else if (t.status === 'in_review') s.in_review++
+      else s.open++
+      if (isOverdue) s.overdue++
     }
   }
 
@@ -168,6 +187,7 @@ export default async function DashboardPage({
           profiles={allProfiles}
           empStats={empStats}
           activeTasks={activeTasks ?? []}
+          membersByTask={membersByTask}
         />
       </div>
 

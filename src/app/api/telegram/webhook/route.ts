@@ -367,7 +367,7 @@ async function handleStart(admin: SupabaseClient, chatIdStr: string, code: strin
   const name = profile.full_name?.split(' ')[0]
   await sendTelegram(
     chatIdStr,
-    `Привязка успешна${name ? `, ${name}` : ''}! Теперь сюда будут приходить уведомления о новых задачах, дедлайнах и вечерние вопросы по выполнению.`,
+    `Привязка успешна${name ? `, ${name}` : ''}! Теперь сюда будут приходить уведомления о новых задачах, объявлениях и приглашениях в команду.`,
   )
 }
 

@@ -35,16 +35,24 @@ export default function DeptTable({
   profiles,
   empStats,
   activeTasks,
+  membersByTask,
 }: {
   profiles: Profile[]
   empStats: Record<string, EmpStats>
   activeTasks: ActiveTask[]
+  membersByTask: Record<string, string[]>
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
+  // Список задач сотрудника = его собственные (assigned_to) + командные,
+  // где он принятый участник.
   const tasksByEmployee = activeTasks.reduce<Record<string, ActiveTask[]>>((acc, t) => {
-    if (!t.assigned_to) return acc
-    ;(acc[t.assigned_to] ??= []).push(t)
+    const responsible = new Set<string>()
+    if (t.assigned_to) responsible.add(t.assigned_to)
+    for (const pid of membersByTask[t.id] ?? []) responsible.add(pid)
+    for (const pid of responsible) {
+      ;(acc[pid] ??= []).push(t)
+    }
     return acc
   }, {})
 

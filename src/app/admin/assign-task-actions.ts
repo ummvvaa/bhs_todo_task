@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendTelegram } from '@/lib/telegram'
-import { formatDateTime } from '@/lib/datetime'
+import { formatDateTime, almatyLocalToUtcISO } from '@/lib/datetime'
 
 type ActionResult = { error?: string; success?: boolean; count?: number } | null
 
@@ -35,12 +35,15 @@ export async function assignTask(
   if (!title) return { error: 'Название обязательно' }
   if (assignees.length === 0) return { error: 'Выберите хотя бы одного сотрудника' }
 
+  // datetime-local трактуем как время Алматы (UTC+5) при сохранении в timestamptz.
+  const dueDate = almatyLocalToUtcISO(dueDateStr)
+
   const tasks = assignees.map((assignedTo) => ({
     title,
     description,
     assigned_to: assignedTo,
     created_by: user.id,
-    due_date: dueDateStr || null,
+    due_date: dueDate,
     is_recurring: isRecurring,
     recurrence: isRecurring ? recurrence : null,
   }))
@@ -49,7 +52,7 @@ export async function assignTask(
   if (error) return { error: error.message }
 
   // Telegram-уведомления привязанным сотрудникам (best-effort, не ломает назначение).
-  await notifyAssignees(assignees, title, dueDateStr)
+  await notifyAssignees(assignees, title, dueDate)
 
   revalidatePath('/tasks')
   revalidatePath('/admin')
@@ -59,7 +62,7 @@ export async function assignTask(
 async function notifyAssignees(
   assignees: string[],
   title: string,
-  dueDateStr: string | null,
+  dueDate: string | null,
 ) {
   try {
     const admin = createAdminClient()
@@ -71,7 +74,7 @@ async function notifyAssignees(
 
     if (!recipients?.length) return
 
-    const deadline = dueDateStr ? formatDateTime(dueDateStr) : 'без дедлайна'
+    const deadline = dueDate ? formatDateTime(dueDate) : 'без дедлайна'
     const text = `Вам назначена задача: ${title}, дедлайн ${deadline}`
 
     await Promise.allSettled(

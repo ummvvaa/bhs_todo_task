@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import AssignTaskForm from './assign-task-form'
-import RecurringTrigger from './recurring-trigger'
 import EmployeesManager, { type EmployeeProfile } from './employees-manager'
 
 export default async function AdminPage() {
@@ -58,17 +57,6 @@ export default async function AdminPage() {
           Создать задачу одному или сразу нескольким сотрудникам — для каждого создаётся отдельная задача.
         </p>
         <AssignTaskForm profiles={staffProfiles} />
-      </section>
-
-      {/* Recurring */}
-      <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5">
-        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-1">
-          Повторяющиеся задачи
-        </h2>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Генерация новых экземпляров для завершённых регулярных задач. Запускается автоматически ночью.
-        </p>
-        <RecurringTrigger />
       </section>
 
     </div>

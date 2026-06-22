@@ -97,12 +97,19 @@ export default async function TasksPage() {
     }))
   }
 
-  // Stats (own tasks only)
+  // Stats: own tasks + accepted team tasks, каждая задача учитывается один раз
+  // (если задача одновременно своя и командная — не дублируем по id).
   const now = new Date()
-  const openCount = all.filter((t) => t.status === 'open').length
-  const reviewCount = all.filter((t) => t.status === 'in_review').length
-  const doneCount = all.filter((t) => t.status === 'done').length
-  const overdueCount = all.filter(
+  const ownIds = new Set<string>(all.map((t) => t.id))
+  const teamForStats = teamTasks.filter((t) => !ownIds.has(t.id))
+  const statsTasks: { status: string; due_date: string | null }[] = [
+    ...all.map((t) => ({ status: t.status as string, due_date: t.due_date as string | null })),
+    ...teamForStats.map((t) => ({ status: t.status, due_date: t.due_date })),
+  ]
+  const openCount = statsTasks.filter((t) => t.status === 'open').length
+  const reviewCount = statsTasks.filter((t) => t.status === 'in_review').length
+  const doneCount = statsTasks.filter((t) => t.status === 'done').length
+  const overdueCount = statsTasks.filter(
     (t) =>
       (t.status === 'open' || t.status === 'in_review') &&
       !!t.due_date &&
@@ -133,7 +140,7 @@ export default async function TasksPage() {
           {profile?.full_name ? `Задачи — ${profile.full_name.split(' ')[0]}` : 'Мои задачи'}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          {all.length} задач · {doneCount} выполнено
+          {statsTasks.length} задач · {doneCount} выполнено
         </p>
       </div>
 
